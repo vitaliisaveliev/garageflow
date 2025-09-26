@@ -10,7 +10,7 @@ spec:
     - host: localhost
       http:
         paths:
-          - path: /nginx
+          - path: /
             pathType: Prefix
             backend:
               service:
