@@ -22,3 +22,34 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+
+# terraform
+# === Terraform ===
+# локальные state-файлы
+*.tfstate
+*.tfstate.*
+terraform.tfstate
+terraform.tfstate.backup
+
+# папка с провайдерами
+.terraform/
+
+# crash-логи Terraform
+crash.log
+crash.*.log
+
+# файлы override и переменные локальные
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+terraform.tfvars
+terraform.tfvars.json
+
+# чувствительные значения
+*.pem
+*.key
+*.crt
+*.tfvars.local
+
