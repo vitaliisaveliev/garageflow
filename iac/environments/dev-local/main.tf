@@ -46,5 +46,10 @@ resource "helm_release" "argocd" {
     name  = "crds.install"
     value = "true"
   }
+
+  set {
+    name  = "server.service.type"
+    value = "LoadBalancer"
+  }
 }
 
