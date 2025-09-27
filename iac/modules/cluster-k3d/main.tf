@@ -23,12 +23,10 @@ set -euo pipefail
 if ! k3d cluster list | awk '{print $1}' | grep -qx "${self.triggers.cluster_name}"; then
   echo "Creating k3d cluster '${self.triggers.cluster_name}'..."
   k3d cluster create ${self.triggers.cluster_name} \
-  --servers ${self.triggers.servers} --agents ${self.triggers.agents} \
-  --port ${self.triggers.http_port}:80@loadbalancer \
-  --port ${self.triggers.https_port}:443@loadbalancer \
-  --k3s-arg "--disable=traefik@server:0" \
-  --wait
-
+    --servers ${self.triggers.servers} --agents ${self.triggers.agents} \
+    --port ${self.triggers.http_port}:80@loadbalancer \
+    --port ${self.triggers.https_port}:443@loadbalancer \
+    --wait
 else
   echo "k3d cluster '${self.triggers.cluster_name}' already exists, skipping create."
 fi

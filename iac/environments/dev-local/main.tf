@@ -36,20 +36,15 @@ resource "helm_release" "cert_manager" {
 }
 
 resource "helm_release" "argocd" {
-  name             = "argocd"
-  repository       = "https://argoproj.github.io/argo-helm"
-  chart            = "argo-cd"
-  namespace        = "argocd"
+  chart = "argo-cd"
+  name  = "argocd"
+  namespace = "argocd"
+  repository = "https://argoproj.github.io/argo-helm"
+
   create_namespace = true
 
   set {
     name  = "crds.install"
     value = "true"
   }
-
-  set {
-    name  = "server.service.type"
-    value = "LoadBalancer"
-  }
 }
-
