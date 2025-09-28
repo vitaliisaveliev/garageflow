@@ -1,0 +1,9 @@
+controller:
+  service:
+    type: LoadBalancer
+
+  ingressClassResource:
+    default: true
+
+  ingressClass:
+    name: nginx

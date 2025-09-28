@@ -55,7 +55,6 @@ terraform.tfvars.json
 
 /.idea/.gitignore
 /.idea/garageflow.iml
-/iac/environments/dev-local/ingress-values.yaml
 /.idea/misc.xml
 /.idea/modules.xml
 /.idea/vcs.xml
