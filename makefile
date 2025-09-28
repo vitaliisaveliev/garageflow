@@ -42,6 +42,6 @@ bootstrap-apps:
 	@echo "⏳ Ждём готовности ArgoCD server..."
 	@kubectl -n argocd rollout status deploy/argocd-server --timeout=180s
 	@echo "🚀 Применяем root Application (apps.yaml)..."
-	kubectl -n argocd apply -f gitops/apps.yaml
+	kubectl -n argocd apply -f gitops/bootstrap/apps.yaml
 	@echo "✅ Bootstrap завершён. Проверяем приложения..."
 	kubectl -n argocd get applications
