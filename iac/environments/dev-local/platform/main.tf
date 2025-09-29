@@ -21,8 +21,12 @@ resource "helm_release" "cert_manager" {
   create_namespace = true
   version          = var.cert_manager_version
 
-  values = [ yamlencode({ installCRDs = true }) ]
+  set {
+    name  = "installCRDs"
+    value = "true"
+  }
 }
+
 
 # 3) ArgoCD
 resource "helm_release" "argocd" {
@@ -46,23 +50,32 @@ resource "helm_release" "argocd" {
 # 4) Ingress для ArgoCD (бэкенд = HTTPS:443)
 resource "kubernetes_ingress_v1" "argocd_ingress" {
   provider = kubernetes.local
-  depends_on = [helm_release.argocd,  helm_release.ingress_nginx]
+  depends_on = [
+    helm_release.argocd,
+    helm_release.ingress_nginx,
+    null_resource.selfsigned_clusterissuer
+  ]
 
   metadata {
     name      = "argocd-server"
     namespace = "argocd"
     annotations = {
-      "nginx.ingress.kubernetes.io/ssl-redirect"     = "false"
+      "nginx.ingress.kubernetes.io/ssl-redirect"     = "true"
       "nginx.ingress.kubernetes.io/backend-protocol" = "HTTPS"
+      "cert-manager.io/cluster-issuer"               = "selfsigned-issuer"
     }
   }
 
   spec {
     ingress_class_name = "nginx"
 
+    tls {
+      hosts       = [var.argocd_host]
+      secret_name = "argocd-tls"
+    }
+
     rule {
       host = var.argocd_host
-
       http {
         path {
           path      = "/"
@@ -78,4 +91,5 @@ resource "kubernetes_ingress_v1" "argocd_ingress" {
     }
   }
 }
+
 

@@ -55,7 +55,7 @@ platform:
 
 ## Показать креды для ArgoCD
 argocd-password:
-	@echo "🔑 ArgoCD URL: https://argocd.localhost:8444"
+	@echo "🔑 ArgoCD URL: https://argocd.localhost"
 	@echo "👤 Username: admin"
 	@echo -n "🔒 Password: "
 	@kubectl -n argocd get secret argocd-initial-admin-secret \
