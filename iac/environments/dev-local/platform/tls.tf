@@ -2,7 +2,7 @@ resource "null_resource" "selfsigned_clusterissuer" {
   depends_on = [helm_release.cert_manager]
 
   provisioner "local-exec" {
-    command = <<EOT
+    command     = <<EOT
       echo "⏳ Waiting for cert-manager CRDs..."
       until kubectl get crd clusterissuers.cert-manager.io >/dev/null 2>&1; do
         echo "   ... still waiting"
