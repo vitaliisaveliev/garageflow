@@ -9,26 +9,49 @@ PLATFORM_DIR=iac/environments/dev-local/platform
 up: cluster-up platform-up
 	@echo "✅ Кластер и платформа подняты"
 
-## Снести кластер и платформу
-down: platform-down cluster-down
-	@echo "🧹 Кластер и платформа удалены"
+# Вспомогательная функция: проверка готовности кластера
+define wait_for_cluster
+  echo "⏳ Waiting for Kubernetes API..."
+  until kubectl cluster-info &>/dev/null; do \
+    echo "   ... still waiting"; \
+    sleep 5; \
+  done; \
+  echo "✅ API is reachable"
 
-## Полный reset (сначала destroy, потом apply заново)
-reset: down up
+  echo "⏳ Waiting for nodes to be Ready..."
+  kubectl wait --for=condition=Ready nodes --all --timeout=120s
+  echo "✅ All nodes are Ready"
+endef
 
-## Только кластер
-cluster-up:
-	cd $(CLUSTER_DIR) && terraform init && terraform apply -auto-approve
+.PHONY: up down reset cluster platform
 
-cluster-down:
+## 🚀 Полный запуск: кластер + платформа
+up: cluster platform
+
+## 🔥 Полное удаление: сначала платформа, потом кластер
+down:
+	@echo "🔥 Destroying platform..."
+	cd $(PLATFORM_DIR) && terraform destroy -auto-approve || true
+	@echo "🔥 Destroying cluster..."
 	cd $(CLUSTER_DIR) && terraform destroy -auto-approve || true
 
-## Только платформа (ингресс, cert-manager, argoCD)
-platform-up:
-	cd $(PLATFORM_DIR) && terraform init && terraform apply -auto-approve
+## ♻️ Полный ресет стейтов и кешей
+reset:
+	@echo "🧹 Resetting Terraform states and caches..."
+	find . -type d -name ".terraform" -exec rm -rf {} +
+	find . -type f -name "terraform.tfstate*" -delete
+	@echo "✅ All Terraform states and caches have been removed."
 
-platform-down:
-	cd $(PLATFORM_DIR) && terraform destroy -auto-approve || true
+## ⚙️ Поднять кластер
+cluster:
+	@echo "🚀 Applying cluster..."
+	cd $(CLUSTER_DIR) && terraform init -upgrade && terraform apply -auto-approve
+	@$(call wait_for_cluster)
+
+## ⚙️ Поднять платформу (только если кластер уже готов)
+platform:
+	@echo "🚀 Applying platform..."
+	cd $(PLATFORM_DIR) && terraform init -upgrade && terraform apply -auto-approve
 
 ## Показать креды для ArgoCD
 argocd-password:

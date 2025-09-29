@@ -44,7 +44,6 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
-terraform.tfvars
 terraform.tfvars.json
 
 # чувствительные значения
