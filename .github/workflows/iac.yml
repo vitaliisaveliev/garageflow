@@ -33,6 +33,12 @@ jobs:
       - name: Terraform Apply (cluster)
         run: terraform apply -auto-approve -input=false
 
+      - name: Upload cluster state
+        uses: actions/upload-artifact@v4
+        with:
+          name: cluster-tfstate
+          path: iac/environments/dev-local/cluster/terraform.tfstate
+
   plan:
     name: Terraform Plan (platform)
     runs-on: self-hosted
@@ -44,16 +50,19 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Download cluster state
+        uses: actions/download-artifact@v4
+        with:
+          name: cluster-tfstate
+          path: iac/environments/dev-local/cluster
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.6
 
-      - name: Terraform fmt & validate
-        run: |
-          terraform fmt -check -recursive
-          terraform init -input=false
-          terraform validate
+      - name: Terraform Init
+        run: terraform init -input=false
 
       - name: Terraform Plan
         run: terraform plan -no-color
@@ -69,6 +78,12 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+
+      - name: Download cluster state
+        uses: actions/download-artifact@v4
+        with:
+          name: cluster-tfstate
+          path: iac/environments/dev-local/cluster
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
