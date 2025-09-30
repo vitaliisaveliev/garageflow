@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - "gitops/**"
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 jobs:
   lint:
