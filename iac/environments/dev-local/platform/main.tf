@@ -92,4 +92,35 @@ resource "kubernetes_ingress_v1" "argocd_ingress" {
   }
 }
 
+# PostgreSQL (Bitnami)
+resource "helm_release" "postgresql" {
+  provider         = helm.local
+  name             = "postgresql"
+  repository       = "https://charts.bitnami.com/bitnami"
+  chart            = "postgresql"
+  namespace        = "database"
+  create_namespace = true
+  version          = var.postgresql_version
+
+  values = [
+    yamlencode({
+      global = {
+        postgresql = {
+          auth = {
+            username = "postgres"
+            password = var.postgresql_password
+            database = "appdb"
+          }
+        }
+      }
+      primary = {
+        persistence = {
+          enabled = false # ⚠️ в dev можно отключить PVC, иначе будет храниться в volume
+        }
+      }
+    })
+  ]
+}
+
+
 

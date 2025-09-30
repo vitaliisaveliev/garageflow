@@ -21,3 +21,15 @@ variable "argocd_host" {
   default     = "argocd.localhost"
   description = "Host for ArgoCD ingress"
 }
+
+variable "postgresql_version" {
+  type        = string
+  default     = "15.2.2" # версия чарта Bitnami PostgreSQL
+  description = "Helm chart version for PostgreSQL"
+}
+
+variable "postgresql_password" {
+  type        = string
+  default     = "changeme" # ⚠️ для dev оставляем так, позже вынесем в Secret
+  description = "PostgreSQL password for the postgres user"
+}
