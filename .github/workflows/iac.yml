@@ -4,6 +4,11 @@ on:
   pull_request:
     paths:
       - "iac/**"
+  push:
+    branches:
+      - main
+    paths:
+      - "iac/**"
   workflow_dispatch:
     inputs:
       apply:
@@ -11,15 +16,20 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: write  # нужно для пуша в ветку infra-state
+
 jobs:
   cluster:
     name: Ensure Cluster
     runs-on: self-hosted
+    # idempotent: гоняем и на PR, и на push/main, и на ручной запуск —
+    # чтобы всегда был kubecontext и стейт кластера для remote_state платформы
     defaults:
       run:
         working-directory: iac/environments/dev-local/cluster
     steps:
-      - name: Checkout repo
+      - name: Checkout repo (current ref)
         uses: actions/checkout@v4
 
       - name: Setup Terraform
@@ -27,13 +37,13 @@ jobs:
         with:
           terraform_version: 1.6.6
 
-      - name: Terraform Init
+      - name: Terraform Init (cluster)
         run: terraform init -input=false
 
-      - name: Terraform Apply (cluster)
+      - name: Terraform Apply (cluster, idempotent)
         run: terraform apply -auto-approve -input=false
 
-      - name: Upload cluster state
+      - name: Upload cluster state (artifact for this run)
         uses: actions/upload-artifact@v4
         with:
           name: cluster-tfstate
@@ -43,14 +53,35 @@ jobs:
     name: Terraform Plan (platform)
     runs-on: self-hosted
     needs: cluster
+    if: github.event_name == 'pull_request'  # планим только на PR
     defaults:
       run:
         working-directory: iac/environments/dev-local/platform
     steps:
-      - name: Checkout repo
+      - name: Checkout repo (PR ref)
         uses: actions/checkout@v4
 
-      - name: Download cluster state
+      # 1) стягиваем ПОСТОЯННЫЙ state платформы из ветки infra-state
+      - name: Checkout infra-state branch
+        uses: actions/checkout@v4
+        with:
+          ref: infra-state
+          path: infra-state
+
+      - name: Restore platform state from infra-state
+        run: |
+          SRC="infra-state/platform/dev-local/terraform.tfstate"
+          DST="iac/environments/dev-local/platform/terraform.tfstate"
+          if [ -f "$SRC" ]; then
+            mkdir -p "$(dirname "$DST")"
+            cp "$SRC" "$DST"
+            echo "Restored platform tfstate from infra-state."
+          else
+            echo "No platform tfstate in infra-state yet (first run?)."
+          fi
+
+      # 2) тянем ВРЕМЕННЫЙ state кластера (артефакт текущего запуска)
+      - name: Download cluster state (artifact)
         uses: actions/download-artifact@v4
         with:
           name: cluster-tfstate
@@ -61,25 +92,50 @@ jobs:
         with:
           terraform_version: 1.6.6
 
-      - name: Terraform Init
+      - name: Terraform Init (platform)
         run: terraform init -input=false
+
+      - name: Terraform Validate
+        run: terraform validate
 
       - name: Terraform Plan
         run: terraform plan -no-color
 
   apply:
     name: Terraform Apply (platform)
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply == true }}
     runs-on: self-hosted
     needs: cluster
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.apply == true)
     defaults:
       run:
         working-directory: iac/environments/dev-local/platform
     steps:
-      - name: Checkout repo
+      - name: Checkout repo (main or manual ref)
         uses: actions/checkout@v4
 
-      - name: Download cluster state
+      # 1) подтягиваем ПОСТОЯННЫЙ state платформы из infra-state
+      - name: Checkout infra-state branch
+        uses: actions/checkout@v4
+        with:
+          ref: infra-state
+          path: infra-state
+
+      - name: Restore platform state from infra-state
+        run: |
+          SRC="infra-state/platform/dev-local/terraform.tfstate"
+          DST="iac/environments/dev-local/platform/terraform.tfstate"
+          if [ -f "$SRC" ]; then
+            mkdir -p "$(dirname "$DST")"
+            cp "$SRC" "$DST"
+            echo "Restored platform tfstate from infra-state."
+          else
+            echo "No platform tfstate in infra-state yet (first run?)."
+          fi
+
+      # 2) тянем ВРЕМЕННЫЙ state кластера (артефакт этого запуска)
+      - name: Download cluster state (artifact)
         uses: actions/download-artifact@v4
         with:
           name: cluster-tfstate
@@ -90,8 +146,22 @@ jobs:
         with:
           terraform_version: 1.6.6
 
-      - name: Terraform Init
+      - name: Terraform Init (platform)
         run: terraform init -input=false
 
-      - name: Terraform Apply
+      - name: Terraform Apply (platform)
         run: terraform apply -auto-approve -input=false
+
+      # 3) сохраняем ОБНОВЛЁННЫЙ platform state обратно в ветку infra-state
+      - name: Persist platform state to infra-state
+        run: |
+          SRC="iac/environments/dev-local/platform/terraform.tfstate"
+          DST="infra-state/platform/dev-local/terraform.tfstate"
+          mkdir -p "$(dirname "$DST")"
+          cp "$SRC" "$DST"
+          cd infra-state
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add platform/dev-local/terraform.tfstate
+          git commit -m "chore(state): update platform tfstate from ${GITHUB_SHA}" || echo "No changes to commit"
+          git push origin infra-state
