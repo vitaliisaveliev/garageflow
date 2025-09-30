@@ -8,7 +8,7 @@ resource "helm_release" "ingress_nginx" {
   create_namespace = true
   version          = var.ingress_nginx_version
 
-  values = [ file("${path.module}/ingress-values.yaml") ]
+  values = [file("${path.module}/ingress-values.yaml")]
 }
 
 # 2) cert-manager
