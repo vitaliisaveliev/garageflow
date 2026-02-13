@@ -57,3 +57,5 @@ terraform.tfvars.json
 /.idea/misc.xml
 /.idea/modules.xml
 /.idea/vcs.xml
+*.tfstate.backup
+.terraform.lock.hcl
